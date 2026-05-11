@@ -1,8 +1,14 @@
-const res = await fetch("/api/applicants");
-
-if (!res.ok) {
-  console.error("API error:", res.status);
-  return;
-}
-
-const data = await res.json();
+module.exports = async function (context, req) {
+    context.res = {
+        status: 200,
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: [
+            {
+                message: "API WORKING",
+                timestamp: new Date()
+            }
+        ]
+    };
+};
