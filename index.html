@@ -159,11 +159,22 @@ let applicants = [];
    LOAD FROM AZURE ON START
 ========================= */
 window.onload = async function () {
-  const res = await fetch(API);
-  applicants = await res.json();
+  try {
+    const res = await fetch(API);
 
-  updateTable();
-  updateDashboard();
+    if (res.ok) {
+      applicants = await res.json();
+    } else {
+      console.error("API failed:", res.status);
+      applicants = [];
+    }
+
+    updateTable();
+    updateDashboard();
+
+  } catch (err) {
+    console.error("Network error:", err);
+  }
 };
 
 /* =========================
