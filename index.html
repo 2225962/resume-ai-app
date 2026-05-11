@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Resume Screening Dashboard</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  padding: 20px;
+}
+
+h2 {
+  color: #2c3e50;
+}
+
+/* DASHBOARD */
+.dashboard {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.card {
+  flex: 1;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #777;
+}
+
+.card p {
+  font-size: 22px;
+  margin: 5px 0 0;
+  font-weight: bold;
+}
+
+/* INPUT */
+input, select, textarea {
+  width: 300px;
+  padding: 8px;
+  margin: 5px 0;
+}
+
+/* BUTTON */
+button {
+  padding: 10px 15px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  background: white;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background: #2c3e50;
+  color: white;
+}
+
+.approved { color: green; }
+.rejected { color: red; }
+</style>
+</head>
+
+<body>
+
+<h2>AI Resume Screening Dashboard (Cloud Enabled)</h2>
+
+<!-- DASHBOARD -->
+<div class="dashboard">
+  <div class="card">
+    <h3>Total Applicants</h3>
+    <p id="total">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Recommended</h3>
+    <p id="recommended">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Rejected</h3>
+    <p id="rejected">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Success Rate</h3>
+    <p id="rate">0%</p>
+  </div>
+</div>
+
+<!-- FORM -->
+<input type="text" placeholder="Name"><br>
+
+<select>
+  <option>Software Engineer</option>
+  <option>Data Analyst</option>
+</select><br>
+
+<select>
+  <option>BS Computer Science</option>
+  <option>Master</option>
+</select><br>
+
+<input type="number" placeholder="Experience">
+<input type="number" placeholder="Projects"><br>
+
+<textarea placeholder="Skills"></textarea><br>
+<textarea placeholder="Certifications"></textarea><br>
+
+<input type="file"><br><br>
+
+<button onclick="evaluateApplicant()">Evaluate</button>
+
+<h3 id="resultStatus"></h3>
+
+<!-- TABLE -->
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Role</th>
+      <th>Status</th>
+      <th>Confidence</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody id="applicantTable"></tbody>
+</table>
+
+<script>
+
+let applicants = [];
+const API = "/api/applicants";
+
+/* =========================
+   LOAD FROM AZURE ON START
+========================= */
+window.onload = async function () {
+  const res = await fetch(API);
+  applicants = await res.json();
+
+  updateTable();
+  updateDashboard();
+};
+
+/* =========================
+   MAIN AI FUNCTION
+========================= */
+async function evaluateApplicant() {
+
+  const name = document.querySelector("input[type='text']").value || "Unknown";
+  const role = document.querySelector("select").value;
+  const education = document.querySelectorAll("select")[1].value;
+
+  const experience = parseInt(document.querySelector("input[type='number']").value) || 0;
+  const projects = parseInt(document.querySelectorAll("input[type='number']")[1].value) || 0;
+
+  const skillsText = document.querySelectorAll("textarea")[0].value.toLowerCase();
+  const certText = document.querySelectorAll("textarea")[1].value.toLowerCase();
+
+  const file = document.querySelector("input[type='file']").files[0];
+
+  // AI FEATURE ENGINEERING
+  let features = experience * 12 + projects * 8;
+
+  if (education.includes("Master")) features += 15;
+  else features += 10;
+
+  if (skillsText.includes("python")) features += 5;
+  if (skillsText.includes("java")) features += 5;
+  if (skillsText.includes("ai")) features += 5;
+
+  if (certText.includes("aws")) features += 6;
+  if (file) features += 3;
+
+  // LOGISTIC REGRESSION (SIMULATED)
+  const probability = 1 / (1 + Math.exp(-(features - 55) / 10));
+
+  const prediction = probability >= 0.5 ? "Recommended" : "Rejected";
+  const confidence = Math.round(probability * 100);
+
+  // SAVE TO AZURE
+  await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      role,
+      prediction,
+      confidence,
+      date: new Date().toLocaleString()
+    })
+  });
+
+  // RELOAD UPDATED DATA
+  const res = await fetch(API);
+  applicants = await res.json();
+
+  document.getElementById("resultStatus").innerText =
+    prediction + " (" + confidence + "%)";
+
+  updateTable();
+  updateDashboard();
+}
+
+/* =========================
+   TABLE UPDATE
+========================= */
+function updateTable() {
+  const table = document.getElementById("applicantTable");
+  table.innerHTML = "";
+
+  applicants.forEach(a => {
+    table.innerHTML += `
+      <tr>
+        <td>${a.name}</td>
+        <td>${a.role}</td>
+        <td class="${a.prediction === "Recommended" ? "approved" : "rejected"}">
+          ${a.prediction}
+        </td>
+        <td>${a.confidence}%</td>
+        <td>${a.date}</td>
+      </tr>
+    `;
+  });
+}
+
+/* =========================
+   DASHBOARD UPDATE
+========================= */
+function updateDashboard() {
+
+  const total = applicants.length;
+  const recommended = applicants.filter(a => a.prediction === "Recommended").length;
+  const rejected = applicants.filter(a => a.prediction === "Rejected").length;
+
+  const rate = total === 0 ? 0 : Math.round((recommended / total) * 100);
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("recommended").innerText = recommended;
+  document.getElementById("rejected").innerText = rejected;
+  document.getElementById("rate").innerText = rate + "%";
+}
+
+</script>
+
+</body>
+</html>
