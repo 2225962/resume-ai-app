@@ -152,8 +152,8 @@ th {
 
 <script>
 
-let applicants = [];
 const API = "/api/applicants";
+let applicants = [];
 
 /* =========================
    LOAD FROM AZURE ON START
@@ -169,6 +169,9 @@ window.onload = async function () {
 /* =========================
    MAIN AI FUNCTION
 ========================= */
+const API = "/api/applicants";
+let applicants = [];
+
 async function evaluateApplicant() {
 
   const name = document.querySelector("input[type='text']").value || "Unknown";
@@ -183,7 +186,6 @@ async function evaluateApplicant() {
 
   const file = document.querySelector("input[type='file']").files[0];
 
-  // AI FEATURE ENGINEERING
   let features = experience * 12 + projects * 8;
 
   if (education.includes("Master")) features += 15;
@@ -196,13 +198,12 @@ async function evaluateApplicant() {
   if (certText.includes("aws")) features += 6;
   if (file) features += 3;
 
-  // LOGISTIC REGRESSION (SIMULATED)
   const probability = 1 / (1 + Math.exp(-(features - 55) / 10));
 
   const prediction = probability >= 0.5 ? "Recommended" : "Rejected";
   const confidence = Math.round(probability * 100);
 
-  // SAVE TO AZURE
+  // SAVE
   await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -215,9 +216,15 @@ async function evaluateApplicant() {
     })
   });
 
-  // RELOAD UPDATED DATA
+  // LOAD DATA SAFELY
   const res = await fetch(API);
-  applicants = await res.json();
+
+  if (res.ok) {
+    applicants = await res.json();
+  } else {
+    console.error("API error:", res.status);
+    applicants = [];
+  }
 
   document.getElementById("resultStatus").innerText =
     prediction + " (" + confidence + "%)";
