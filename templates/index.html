@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Resume Screening</title>
+</head>
+<body>
+
+<h2>AI Resume Screening System</h2>
+
+<input id="experience" placeholder="Experience"><br><br>
+<input id="skills" placeholder="Skills (comma separated)"><br><br>
+<input id="certs" placeholder="Certifications"><br><br>
+<input id="projects" placeholder="Projects"><br><br>
+
+<button onclick="predict()">Predict</button>
+
+<h3 id="result"></h3>
+
+<script>
+function predict() {
+    fetch("/predict", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            experience: document.getElementById("experience").value,
+            skills: document.getElementById("skills").value,
+            certifications: document.getElementById("certs").value,
+            projects: document.getElementById("projects").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("result").innerText =
+            data.result || data.error;
+    });
+}
+</script>
+
+</body>
+</html>
